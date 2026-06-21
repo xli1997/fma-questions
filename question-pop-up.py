@@ -25,7 +25,7 @@ KEVIN_DIR = ROOT / 'KevinHuang'
 BOOK_SOLUTION_DIR = ROOT / 'BookSolution'
 DIFFICULTY_JSON = ROOT / 'difficulty.json'
 
-OUT_HTML = ROOT / 'question-pop-up.html'
+OUT_HTML = ROOT / 'index-test.html'
 
 # Global difficulty data (loaded once)
 difficulty_data = {}
@@ -132,8 +132,8 @@ def find_book_solution(year: str, section: str, num_str: str):
     return None
 
 
-def make_file_link(path: Path):
-    return f"file://{path.resolve()}"
+def make_relative_link(path: Path):
+    return './' + path.relative_to(ROOT).as_posix()
 
 
 def generate():
@@ -149,57 +149,38 @@ def generate():
         year, section, num_str, basename = parse_name(j)
 
         a_path = ALL_IN_ONE_DIR / j
-        b_path = find_pic_by_year(year, section, basename, num_str)
         c_path = find_pdf(year, section, num_str)
         d_path = find_book_solution(year, section, num_str)
 
-        # Build difficulty key: include section (e.g. 'A' or 'B') when present
         if section:
             difficulty_key = f'{year}-{section}-{num_str.zfill(2)}'
         else:
             difficulty_key = f'{year}-{num_str.zfill(2)}'
         difficulty_val = get_difficulty(difficulty_key)
-        
-        # Handle both single values and lists of three values
+
         if isinstance(difficulty_val, list):
-            # difficulty_val is a list [val1, val2, val3]
             val1, val2, val3 = difficulty_val[0], difficulty_val[1], difficulty_val[2]
             difficulty_display = f'<span class="difficulty-value">{val1}</span> <span class="difficulty-value">{val2}</span> <span class="difficulty-value">{val3}</span>'
         else:
-            # difficulty_val is a single integer
             difficulty_display = f'<span class="difficulty-value">{difficulty_val}</span>'
 
-        if c_path:
-            a_link = f'<a href="#" class="a-link" data-a-src="{make_file_link(a_path)}" data-c-src="{make_file_link(c_path)}' + (f'" data-d-src="{make_file_link(d_path)}' if d_path else '" data-d-src=""') + f'">(A) {html.escape(j)}</a>'
-        else:
-            a_link = f'<a href="#" class="a-link" data-a-src="{make_file_link(a_path)}" data-c-src=""' + (f' data-d-src="{make_file_link(d_path)}"' if d_path else ' data-d-src=""') + f'>(A) {html.escape(j)}</a>'
-        if b_path:
-            b_link = f'<a href="#" class="b-link" data-b-src="{make_file_link(b_path)}" data-b-name="{html.escape(b_path.name)}"'
-            if c_path:
-                if d_path:
-                    b_link += f' data-c-src="{make_file_link(c_path)}" data-d-src="{make_file_link(d_path)}">(B) {html.escape(b_path.name)}</a>'
-                else:
-                    b_link += f' data-c-src="{make_file_link(c_path)}" data-d-src="">(B) {html.escape(b_path.name)}</a>'
-            else:
-                if d_path:
-                    b_link += f' data-c-src="" data-d-src="{make_file_link(d_path)}">(B) {html.escape(b_path.name)}</a>'
-                else:
-                    b_link += f' data-c-src="" data-d-src="">(B) {html.escape(b_path.name)}</a>'
-        else:
-            b_link = '(B) —'
+        a_src = make_relative_link(a_path)
+        c_src = make_relative_link(c_path) if c_path else ''
+        d_src = make_relative_link(d_path) if d_path else ''
+
+        a_link = f'<a href="#" class="a-link" data-a-src="{a_src}" data-c-src="{c_src}" data-d-src="{d_src}">{html.escape(j)}</a>'
 
         if c_path:
-            c_link = f'<a href="{make_file_link(c_path)}" target="_blank">(C) {html.escape(c_path.name)}</a>'
+            c_link = f'<a href="{c_src}" target="_blank">{html.escape(c_path.name)}</a>'
         else:
-            c_link = '(C) —'
+            c_link = '—'
 
         if d_path:
-            d_link = f'<a href="{make_file_link(d_path)}" target="_blank">(D) {html.escape(d_path.name)}</a>'
+            d_link = f'<a href="{d_src}" target="_blank">{html.escape(d_path.name)}</a>'
         else:
-            d_link = '(D) —'
+            d_link = '—'
 
-        rows.append((a_link, b_link, difficulty_display, c_link, d_link))
-
+        rows.append((a_link, difficulty_display, c_link, d_link))
 
     with OUT_HTML.open('w', encoding='utf-8') as f:
         f.write("<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>Question pop-up</title>\n")
@@ -208,7 +189,7 @@ def generate():
         f.write("  table{border-collapse:collapse; width:100%;}\n")
         f.write("  th{ text-align:left; padding:8px 10px; border-bottom:1px solid #ccc; background:#f7f7f7;}\n")
         f.write("  td{ vertical-align:top; padding:6px 8px; border-bottom:1px solid #eee; }\n")
-        f.write("  .col-a{width:20%;} .col-b{width:20%;} .col-e{width:15%;} .col-c{width:22.5%;} .col-d{width:22.5%;}\n")
+        f.write("  .col-a{width:20%;} .col-e{width:15%;} .col-c{width:22.5%;} .col-d{width:22.5%;}\n")
         f.write("  .difficulty-value{ font-weight:bold; color:#007bff; font-size:15px; padding:2px 8px; display:inline-block; margin-right:4px; }\n")
         f.write("  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:1000;}\n")
         f.write("  .modal{ position:relative; background:#fff; padding:12px; max-width:96vw; max-height:94vh; min-width:320px; min-height:240px; overflow:auto; border-radius:6px; box-shadow:0 8px 30px rgba(0,0,0,0.25);}\n")
@@ -218,13 +199,13 @@ def generate():
         f.write("  .btn:disabled{ background:#999; cursor:default; }\n")
         f.write("</style>\n")
         f.write("</head><body>\n")
-        f.write(f"<h1>Question pop-up ({len(rows)})</h1>\n")
+        f.write(f"<h1>All F=ma Past Exam Questions ({len(rows)})</h1>\n")
         f.write("<table>\n")
-        f.write("  <thead><tr><th class=\"col-a\">A (all-in-1)</th><th class=\"col-e\">E (Difficulty)</th><th class=\"col-b\">B (pic-by-year)</th><th class=\"col-c\">C (pdf)</th><th class=\"col-d\">D (BookSolution)</th></tr></thead>\n")
+        f.write("  <thead><tr><th class=\"col-a\">A (questions)</th><th class=\"col-e\">B (Difficulty)</th><th class=\"col-c\">C (PdfSolution)</th><th class=\"col-d\">D (BookSolution)</th></tr></thead>\n")
         f.write("  <tbody>\n")
         for row in rows:
-            a, b, e, c, d = row
-            f.write(f"    <tr><td class=\"col-a\">{a}</td><td class=\"col-e\">{e}</td><td class=\"col-b\">{b}</td><td class=\"col-c\">{c}</td><td class=\"col-d\">{d}</td></tr>\n")
+            a, e, c, d = row
+            f.write(f"    <tr><td class=\"col-a\">{a}</td><td class=\"col-e\">{e}</td><td class=\"col-c\">{c}</td><td class=\"col-d\">{d}</td></tr>\n")
         f.write("  </tbody>\n")
         f.write("</table>\n")
         f.write("<div id=\"modalOverlay\" class=\"modal-overlay\">\n")
